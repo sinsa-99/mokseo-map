@@ -31,10 +31,6 @@
     box-shadow: var(--shadow); padding: 14px 16px; backdrop-filter: blur(6px); }
   h1 { font-size: 19px; margin: 0 0 2px; letter-spacing: -0.3px; }
   .sub { color: var(--muted); font-size: 12.5px; line-height: 1.5; margin: 0 0 10px; }
-  .stats { display: flex; gap: 8px; margin: 8px 0 12px; }
-  .stat { flex: 1; background: var(--chip); border-radius: 10px; padding: 8px 10px; }
-  .stat b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
-  .stat span { font-size: 11.5px; color: var(--muted); }
   .group { margin: 10px 0; }
   .group-title { font-size: 11.5px; color: var(--muted); margin-bottom: 6px; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -109,12 +105,7 @@
     <button class="act" id="toggle" aria-expanded="true">접기</button>
   </div>
   <div class="body">
-    <p class="sub">개화 9월 말~10월 중순. 꽃보다 향이 먼저 닿는 나무라, 근처에 가면 코가 먼저 알아챕니다. <span id="built"></span></p>
-    <div class="stats">
-      <div class="stat"><b id="n-spot">0</b><span>명소·제보</span></div>
-      <div class="stat"><b id="n-pub">0</b><span>공공데이터</span></div>
-      <div class="stat"><b id="n-obs">0</b><span>관측기록</span></div>
-    </div>
+    <p class="sub">9월 말부터 10월 중순까지 꽃이 피어요. 향이 진해서 꽃보다 냄새로 먼저 알아챌 때가 많아요. <span id="built"></span></p>
 
     <div class="group">
       <div class="group-title">나무</div>
@@ -144,18 +135,13 @@
     </div>
 
     <details id="list-wrap">
-      <summary>장소 목록 (명소·공공데이터)</summary>
+      <summary>장소 목록</summary>
       <ul class="list" id="list"></ul>
     </details>
 
     <p class="foot">
-      큰 점 = 명소·제보, 네모 = 공공데이터(지자체 가로수·화단 대장), 작은 점 = 관측기록. 점선 테두리 = 신뢰도 낮음.<br>
-      퍼지는 테두리 = 최근 7일 안에 핀 것을 본 기록(제보·관측). 공공데이터는 '심겨 있는 곳'이라 개화 여부와 무관합니다.<br>
-      관측기록은 학명 기준이라 <i>O. fragrans</i> 종 단위 기록은 '목서'로 표시했습니다.<br>
-      '과거 관찰' 핀은 시설 대표 위치이며, 실제 나무 위치와 현재 개화·존재 여부는 미확인입니다.<br>
-      데이터: <a href="https://www.inaturalist.org" target="_blank" rel="noopener">iNaturalist</a> ·
-      <a href="https://www.gbif.org" target="_blank" rel="noopener">GBIF</a> · 공공데이터포털·부산 공공데이터 · 지자체 정보공개 회신 · 블로그·기사(각 팝업에 출처) ·
-      좌표 카카오맵 검색 · 지도 © OpenStreetMap contributors (타일 OSM France)
+      큰 동그라미는 명소·제보, 네모는 지자체 자료(가로수·공원·화단), 작은 점은 관측기록이에요. 점선 테두리는 신뢰도가 낮은 곳이에요.<br>
+      테두리가 퍼지는 점은 최근 7일 안에 꽃을 봤다는 기록이 있는 곳이에요. 네모는 나무가 심긴 곳이라 지금 꽃이 폈는지는 알 수 없어요.
     </p>
   </div>
 </aside>
@@ -253,11 +239,11 @@
     const shown = markers.filter(m => visible(m._p));
     cluster.addLayers(shown);
     const nRecent = shown.filter(m => m._p.recent).length;
-    document.getElementById('shown').textContent = `지도에 ${shown.length}개 표시 중 · 최근 7일 ${nRecent}곳`;
+    document.getElementById('shown').textContent = `지도에 ${shown.length}곳이 보여요` + (nRecent ? ` · 최근 7일 안에 핀 곳 ${nRecent}곳` : '');
     const list = document.getElementById('list');
     const spots = shown.filter(m => m._p.kind !== '관측기록').sort((a, b) => (a._p.address || '').localeCompare(b._p.address || '', 'ko'));
     list.innerHTML = spots.map((m, i) => `<li data-i="${markers.indexOf(m)}">${esc(m._p.name)} <span class="badge ${m._p.species === '금목서' ? 'gold' : m._p.species === '은목서' ? 'silver' : ''}">${esc(m._p.species)}</span>${m._p.historical ? '<span class="badge">과거 관찰</span>' : ''}<small>${esc(m._p.address)}</small></li>`).join('')
-      || '<li>표시할 명소가 없습니다.</li>';
+      || '<li>보이는 장소가 없어요.</li>';
   }
 
   function bindChips(id, key) {
@@ -290,19 +276,19 @@
 
   let meMarker = null;
   document.getElementById('locate').addEventListener('click', () => {
-    if (!navigator.geolocation) { alert('이 브라우저는 위치 기능을 지원하지 않습니다.'); return; }
+    if (!navigator.geolocation) { alert('이 브라우저에서는 위치를 쓸 수 없어요.'); return; }
     navigator.geolocation.getCurrentPosition(pos => {
       const ll = [pos.coords.latitude, pos.coords.longitude];
       if (meMarker) meMarker.remove();
       meMarker = L.circleMarker(ll, { radius: 8, color: '#1a73e8', fillColor: '#1a73e8', fillOpacity: .9, weight: 3 }).addTo(map).bindTooltip('내 위치');
       map.setView(ll, 12);
-    }, err => alert('위치를 가져오지 못했습니다: ' + err.message), { enableHighAccuracy: true, timeout: 10000 });
+    }, err => alert('위치를 가져오지 못했어요. 휴대폰 설정에서 위치 권한을 확인해 주세요.'), { enableHighAccuracy: true, timeout: 10000 });
   });
 
-  document.getElementById('n-spot').textContent = PLACES.filter(p => p.kind === '명소').length;
-  document.getElementById('n-pub').textContent = PLACES.filter(p => p.kind === '공공데이터').length;
-  document.getElementById('n-obs').textContent = META.n_obs_points ?? PLACES.filter(p => p.kind === '관측기록').length;
-  if (META.built) document.getElementById('built').textContent = `데이터 기준 ${META.built}.`;
+  if (META.built) {
+    const [y, mo, d] = META.built.split('-').map(Number);
+    document.getElementById('built').textContent = `${y}년 ${mo}월 ${d}일 기준이에요.`;
+  }
   if (window.matchMedia('(max-width: 640px)').matches) setCollapsed(true);
   render();
 })();
