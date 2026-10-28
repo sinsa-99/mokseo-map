@@ -187,8 +187,13 @@
 
   function popupHtml(p) {
     const tags = speciesTags(p.species).map(s => `<span class="badge ${s === '금목서' ? 'gold' : s === '은목서' ? 'silver' : ''}">${esc(s)}</span>`).join('');
-    const links = (p.urls && p.urls.length ? p.urls : (p.url ? [p.url] : []))
-      .map((u, i) => `<a href="${esc(u)}" target="_blank" rel="noopener">출처${p.urls && p.urls.length > 1 ? ' ' + (i + 1) : ''}</a>`).join('');
+    // 카카오맵 검색·장소 페이지는 위치를 확인한 링크라 '출처'와 따로 '위치 확인'으로 단다
+    const all = p.urls && p.urls.length ? p.urls : (p.url ? [p.url] : []);
+    const isLoc = u => /^https?:\/\/(place\.)?map\.kakao\.com\//.test(u);
+    const label = (arr, i, name) => name + (arr.length > 1 ? ' ' + (i + 1) : '');
+    const src = all.filter(u => !isLoc(u)), loc = all.filter(isLoc);
+    const links = src.map((u, i) => `<a href="${esc(u)}" target="_blank" rel="noopener">${label(src, i, '출처')}</a>`).join('')
+      + loc.map((u, i) => `<a href="${esc(u)}" target="_blank" rel="noopener">${label(loc, i, '위치 확인')}</a>`).join('');
     const nm = encodeURIComponent(p.name);
     return `<div class="pop">
       <h3>${esc(p.name)}</h3>
