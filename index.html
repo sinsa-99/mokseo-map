@@ -66,7 +66,9 @@
   /* 팝업 (카카오 CustomOverlay) — 바탕은 항상 밝게 */
   .kpop { position: relative; width: 280px; max-width: calc(100vw - 32px); background: #fffdf8; color: #2b2620;
     border: 1px solid #e8e0d2; border-radius: 12px; box-shadow: 0 6px 24px rgba(60, 40, 10, .22);
-    padding: 12px 14px; font-size: 13px; line-height: 1.5; margin-bottom: 16px; }
+    padding: 12px 14px; font-size: 13px; line-height: 1.5; margin-bottom: 16px;
+    /* 카카오 CustomOverlay 컨테이너가 white-space: nowrap을 걸어서 긴 문장이 상자 밖으로 나간다 → 줄바꿈을 다시 켠다 */
+    white-space: normal; overflow-wrap: anywhere; word-break: keep-all; text-align: left; }
   .kpop::after { content: ""; position: absolute; left: 50%; bottom: -8px; width: 14px; height: 14px; background: #fffdf8;
     border-right: 1px solid #e8e0d2; border-bottom: 1px solid #e8e0d2; transform: translateX(-50%) rotate(45deg); }
   .kpop .close { position: absolute; top: 6px; right: 8px; border: 0; background: none; font-size: 20px; line-height: 1;
