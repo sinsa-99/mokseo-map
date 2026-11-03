@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>금목서·은목서 지도</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css">
 <style>
   :root {
     --bg: #fffdf8; --fg: #2b2620; --muted: #7a7166; --line: #e8e0d2;
@@ -24,7 +22,7 @@
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg);
     font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", sans-serif; }
-  #map { position: fixed; inset: 0; }
+  #map { position: fixed; inset: 0; background: #ece8df; }
 
   .panel { position: fixed; z-index: 1000; top: 12px; left: 12px; width: 330px; max-height: calc(100% - 24px);
     overflow: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
@@ -43,6 +41,7 @@
   button.act { font-family: inherit; font-size: 13px; padding: 7px 11px; border-radius: 9px; border: 1px solid var(--line);
     background: var(--bg); color: var(--fg); cursor: pointer; }
   .shown { font-size: 12.5px; color: var(--muted); }
+  .shown.error { color: #b3261e; }
   details { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
   summary { cursor: pointer; font-size: 13px; font-weight: 600; }
   .list { list-style: none; padding: 0; margin: 8px 0 0; }
@@ -53,30 +52,26 @@
   .foot a { color: inherit; }
   #toggle { display: none; }
 
-  /* 마커 */
-  .dot { border-radius: 50%; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.35); }
-  .dot.obs { border-width: 1.5px; opacity: .85; }
-  .dot.low { border-style: dashed; }
-  .dot.pub { border-radius: 3px; }
+  /* 범례 색 (마커 자체는 SVG 이미지로 그린다) */
   .chip .sw.sq { border-radius: 2px; }
   .chip .sw.sm { width: 8px; height: 8px; }
-  .recent-wrap { position: relative; }
-  .recent-wrap::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid var(--gold);
-    animation: pulse 1.8s ease-out infinite; pointer-events: none; }
-  .pulse-sw { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--gold); display: inline-block; }
-  @keyframes pulse { from { transform: scale(.7); opacity: .9; } to { transform: scale(1.6); opacity: 0; } }
-  @media (prefers-reduced-motion: reduce) { .recent-wrap::after { animation: none; opacity: .8; } }
+  .pulse-sw { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--gold); display: inline-block;
+    box-shadow: 0 0 0 2px var(--chip), 0 0 0 3.5px var(--gold); }
   .sp-gold { background: var(--gold); }
   .sp-silver { background: var(--silver); border-color: var(--silver-line) !important; }
   .sp-both { background: linear-gradient(90deg, var(--gold) 50%, var(--silver) 50%); }
   .sp-unknown { background: var(--unknown); }
-  .cluster { background: rgba(224, 123, 22, .88); color: #fff; border-radius: 50%; display: flex; align-items: center;
-    justify-content: center; font-weight: 700; font-size: 13px; border: 3px solid rgba(255,255,255,.85);
-    box-shadow: 0 2px 8px rgba(0,0,0,.3); }
+  .me { width: 16px; height: 16px; border-radius: 50%; background: #1a73e8; border: 3px solid #fff; box-shadow: 0 0 0 2px #1a73e8; }
 
-  /* 팝업 */
-  .leaflet-popup-content { margin: 12px 14px; font-size: 13px; line-height: 1.5; min-width: 220px; }
-  .pop h3 { margin: 0 0 4px; font-size: 15px; }
+  /* 팝업 (카카오 CustomOverlay) — 바탕은 항상 밝게 */
+  .kpop { position: relative; width: 280px; max-width: calc(100vw - 32px); background: #fffdf8; color: #2b2620;
+    border: 1px solid #e8e0d2; border-radius: 12px; box-shadow: 0 6px 24px rgba(60, 40, 10, .22);
+    padding: 12px 14px; font-size: 13px; line-height: 1.5; margin-bottom: 16px; }
+  .kpop::after { content: ""; position: absolute; left: 50%; bottom: -8px; width: 14px; height: 14px; background: #fffdf8;
+    border-right: 1px solid #e8e0d2; border-bottom: 1px solid #e8e0d2; transform: translateX(-50%) rotate(45deg); }
+  .kpop .close { position: absolute; top: 6px; right: 8px; border: 0; background: none; font-size: 20px; line-height: 1;
+    cursor: pointer; color: #7a7166; padding: 2px 5px; font-family: inherit; }
+  .pop h3 { margin: 0 22px 4px 0; font-size: 15px; }
   .badge { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 999px; background: #f4ede0; color: #5a4a35; margin-right: 4px; }
   .badge.gold { background: #fde3c4; color: #8a4a06; }
   .badge.silver { background: #eeece6; color: #55524a; }
@@ -84,7 +79,7 @@
   .pop .evidence-summary { margin: 6px 0; font-size: 12.5px; }
   .pop .location-note { margin: 6px 0; padding: 6px 8px; background: #f4ede0; color: #5a4a35; border-radius: 6px; font-size: 12px; }
   .pop img { width: 100%; max-height: 160px; object-fit: cover; border-radius: 8px; margin-top: 6px; }
-  .pop .links a { margin-right: 8px; }
+  .pop .links a { margin-right: 8px; color: #1a5fb4; }
   .pop .meta { color: #7a7166; font-size: 12px; }
 
   @media (max-width: 640px) {
@@ -130,7 +125,7 @@
       </div>
     </div>
     <div class="row" style="margin-top:10px">
-      <span class="shown" id="shown"></span>
+      <span class="shown" id="shown">지도를 불러오는 중이에요…</span>
       <button class="act" id="locate">내 위치</button>
     </div>
 
@@ -141,48 +136,35 @@
 
     <p class="foot">
       큰 동그라미는 명소·제보, 네모는 지자체 자료(가로수·공원·화단), 작은 점은 관측기록이에요. 점선 테두리는 신뢰도가 낮은 곳이에요.<br>
-      테두리가 퍼지는 점은 최근 7일 안에 꽃을 봤다는 기록이 있는 곳이에요. 네모는 나무가 심긴 곳이라 지금 꽃이 폈는지는 알 수 없어요.
+      금색 테두리가 한 겹 더 있는 점은 최근 7일 안에 꽃을 봤다는 기록이 있는 곳이에요. 네모는 나무가 심긴 곳이라 지금 꽃이 폈는지는 알 수 없어요.
     </p>
   </div>
 </aside>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
+<!-- 카카오맵 JS SDK. 키는 카카오디벨로퍼스 앱 news-invest-map(ID 1633269)의 JavaScript 키로, 등록한 도메인(localhost:3000, sinsa-99.github.io, news-invest-web.vercel.app)에서만 동작한다.
+     그래서 이 파일을 더블클릭(file://)으로 열면 지도가 안 뜬다. 폴더에서 python3 -m http.server 3000 을 띄우고 http://localhost:3000 으로 연다. -->
+<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=149c27c06537761dda9d589f7e383114&libraries=clusterer&autoload=false"></script>
 <script src="data/places.js?v=d57bcb7dd1"></script>
 <script>
 (function () {
+  const shownEl = document.getElementById('shown');
+  const fail = msg => { shownEl.textContent = msg; shownEl.classList.add('error'); };
+  const NO_SDK = '카카오 지도를 못 불러왔어요. 이 파일은 더블클릭(file://)으로는 안 열려요. 폴더에서 python3 -m http.server 3000 을 실행한 뒤 http://localhost:3000 으로 열거나, https://sinsa-99.github.io/mokseo-map/ 로 보세요.';
   if (!window.PLACES) {
-    document.getElementById('shown').textContent = '데이터 파일(data/places.js)을 못 읽었습니다. scripts/build_data.py를 먼저 실행하세요.';
+    fail('데이터 파일(data/places.js)을 못 읽었습니다. scripts/build_data.py를 먼저 실행하세요.');
     throw new Error('PLACES missing');
   }
+  if (!window.kakao || !kakao.maps || typeof kakao.maps.load !== 'function') {
+    fail(NO_SDK);
+    throw new Error('kakao maps sdk missing');
+  }
+  let started = false;
+  const sdkTimer = setTimeout(() => { if (!started) fail(NO_SDK); }, 8000);
+  kakao.maps.load(() => { started = true; clearTimeout(sdkTimer); init(); });
+
   const PLACES = window.PLACES, META = window.PLACES_META || {};
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-
-  const map = L.map('map', { zoomControl: false, preferCanvas: false }).setView([35.6, 127.9], 7);
-  L.control.zoom({ position: 'topright' }).addTo(map);
-  // 파일을 더블클릭으로 열면(file://) 브라우저가 Referer를 안 보내서 tile.openstreetmap.org는 403 'Access blocked'를 준다.
-  // Referer 없이도 되는 OSM 미러를 기본으로 두고, 막히면 오른쪽 위에서 바꿀 수 있게 한다.
-  const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
-  const bases = {
-    '기본 (OSM 프랑스 HOT)': L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
-      maxZoom: 19, subdomains: 'abc', attribution: OSM_ATTR + ', 타일 <a href="https://www.openstreetmap.fr/" target="_blank" rel="noopener">OSM France</a>' }),
-    'OSM 독일': L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
-      maxZoom: 18, attribution: OSM_ATTR + ', 타일 openstreetmap.de' }),
-    'OSM 표준 (서버로 열 때만)': L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19, attribution: OSM_ATTR })
-  };
-  bases['기본 (OSM 프랑스 HOT)'].addTo(map);
-  L.control.layers(bases, null, { position: 'topright', collapsed: true }).addTo(map);
-
-  const cluster = L.markerClusterGroup({
-    disableClusteringAtZoom: 13, maxClusterRadius: 45, showCoverageOnHover: false,
-    iconCreateFunction: c => {
-      const n = c.getChildCount(), s = n < 10 ? 30 : n < 50 ? 38 : 46;
-      return L.divIcon({ html: `<div class="cluster" style="width:${s}px;height:${s}px">${n}</div>`, className: '', iconSize: [s, s] });
-    }
-  }).addTo(map);
-
-  const spClass = sp => sp === '금목서' ? 'sp-gold' : sp === '은목서' ? 'sp-silver' : sp === '금목서·은목서' ? 'sp-both' : 'sp-unknown';
+  const isDesktop = () => window.matchMedia('(min-width: 641px)').matches;
   const speciesTags = sp => sp === '금목서·은목서' ? ['금목서', '은목서'] : [sp];
 
   function popupHtml(p) {
@@ -210,92 +192,175 @@
     </div>`;
   }
 
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const DAY = 86400000;
-  PLACES.forEach(p => {
-    const d = p.date && /^\d{4}-\d{2}-\d{2}/.test(p.date) ? new Date(p.date.slice(0, 10) + 'T00:00:00') : null;
-    // 최근 7일 안에 '핀 것을 본' 기록만: 관측기록, 제보, 또는 올해 개화를 적은 블로그 글
-    const seen = p.kind === '관측기록' || p.bloomSeen;
-    p.recent = seen && !!d && (today - d) / DAY <= 7 && (today - d) >= 0;
-  });
-  const markers = PLACES.map(p => {
-    const big = p.kind === '명소', pub = p.kind === '공공데이터', s = big ? 18 : pub ? 14 : 11;
-    const icon = L.divIcon({
-      className: '', iconSize: [s, s],
-      html: `<div class="${p.recent ? 'recent-wrap' : ''}" style="width:${s}px;height:${s}px"><div class="dot ${big || pub ? '' : 'obs'} ${pub ? 'pub' : ''} ${p.confidence === '하' ? 'low' : ''} ${spClass(p.species)}" style="width:${s}px;height:${s}px"></div></div>`
-    });
-    const m = L.marker([p.lat, p.lng], { icon, title: p.name, zIndexOffset: p.recent ? 900 : big ? 500 : pub ? 300 : 0 });
-    m.bindPopup(popupHtml(p), {
-      maxWidth: 280,
-      // 데스크톱의 왼쪽 목록 패널이 팝업 내용을 가리지 않도록 이동한다.
-      autoPanPaddingTopLeft: [window.matchMedia('(min-width: 641px)').matches ? 354 : 12, 12],
-      autoPanPaddingBottomRight: [12, 12],
-    });
-    m._p = p;
-    return m;
-  });
-
-  const state = { species: new Set(['금목서', '은목서', '목서']), kind: new Set(['명소', '공공데이터', '관측기록']), hideLow: false, recentOnly: false };
-  const visible = p => speciesTags(p.species).some(s => state.species.has(s)) && state.kind.has(p.kind)
-    && !(state.hideLow && p.confidence === '하') && !(state.recentOnly && !p.recent);
-
-  function render() {
-    cluster.clearLayers();
-    const shown = markers.filter(m => visible(m._p));
-    cluster.addLayers(shown);
-    const nRecent = shown.filter(m => m._p.recent).length;
-    document.getElementById('shown').textContent = `지도에 ${shown.length}곳이 보여요` + (nRecent ? ` · 최근 7일 안에 핀 곳 ${nRecent}곳` : '');
-    const list = document.getElementById('list');
-    const spots = shown.filter(m => m._p.kind !== '관측기록').sort((a, b) => (a._p.address || '').localeCompare(b._p.address || '', 'ko'));
-    list.innerHTML = spots.map((m, i) => `<li data-i="${markers.indexOf(m)}">${esc(m._p.name)} <span class="badge ${m._p.species === '금목서' ? 'gold' : m._p.species === '은목서' ? 'silver' : ''}">${esc(m._p.species)}</span>${m._p.historical ? '<span class="badge">과거 관찰</span>' : ''}<small>${esc(m._p.address)}</small></li>`).join('')
-      || '<li>보이는 장소가 없어요.</li>';
+  // 마커 이미지: 종(색) × 출처(모양·크기) × 신뢰도(점선) × 최근 개화(금색 겉테두리) 조합마다 SVG 하나를 만들어 재사용한다.
+  const COLOR = { gold: '#e07b16', silver: '#f3f0e6', silverLine: '#8a8577', unknown: '#9aa0a6' };
+  const imgCache = new Map();
+  function markerImage(p) {
+    const big = p.kind === '명소', pub = p.kind === '공공데이터';
+    const s = big ? 18 : pub ? 14 : 11;
+    const sp = p.species === '금목서' ? 'gold' : p.species === '은목서' ? 'silver' : p.species === '금목서·은목서' ? 'both' : 'unknown';
+    const low = p.confidence === '하', recent = !!p.recent;
+    const key = [s, pub ? 'sq' : 'ci', sp, low, recent].join('|');
+    if (imgCache.has(key)) return imgCache.get(key);
+    const pad = recent ? 6 : 2, W = s + pad * 2, c = W / 2, r = s / 2;
+    const sw = big || pub ? 2 : 1.5;
+    const stroke = sp === 'silver' ? COLOR.silverLine : '#fff';
+    const dash = low ? ' stroke-dasharray="3 2"' : '';
+    const fill = sp === 'gold' ? COLOR.gold : sp === 'silver' ? COLOR.silver : sp === 'unknown' ? COLOR.unknown : 'url(#g)';
+    const defs = sp === 'both' ? `<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="0"><stop offset="50%" stop-color="${COLOR.gold}"/><stop offset="50%" stop-color="${COLOR.silver}"/></linearGradient></defs>` : '';
+    const shadow = pub
+      ? `<rect x="${c - r}" y="${c - r + 1}" width="${s}" height="${s}" rx="3" fill="rgba(0,0,0,.28)"/>`
+      : `<circle cx="${c}" cy="${c + 1}" r="${r}" fill="rgba(0,0,0,.28)"/>`;
+    const body = pub
+      ? `<rect x="${c - r + sw / 2}" y="${c - r + sw / 2}" width="${s - sw}" height="${s - sw}" rx="3" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"${dash}/>`
+      : `<circle cx="${c}" cy="${c}" r="${r - sw / 2}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"${dash}/>`;
+    const ring = recent ? `<circle cx="${c}" cy="${c}" r="${r + 4}" fill="none" stroke="${COLOR.gold}" stroke-width="2"/>` : '';
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${W}" viewBox="0 0 ${W} ${W}">${defs}${shadow}${body}${ring}</svg>`;
+    const img = new kakao.maps.MarkerImage('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg),
+      new kakao.maps.Size(W, W), { offset: new kakao.maps.Point(c, c), alt: '' });
+    imgCache.set(key, img);
+    return img;
   }
 
-  function bindChips(id, key) {
-    document.querySelectorAll(`#${id} .chip`).forEach(b => b.addEventListener('click', () => {
-      const on = b.getAttribute('aria-pressed') !== 'true';
-      b.setAttribute('aria-pressed', on);
-      on ? state[key].add(b.dataset.v) : state[key].delete(b.dataset.v);
-      render();
-    }));
-  }
-  bindChips('f-species', 'species');
-  bindChips('f-kind', 'kind');
-  document.getElementById('f-recent').addEventListener('click', e => {
-    state.recentOnly = !state.recentOnly; e.currentTarget.setAttribute('aria-pressed', state.recentOnly); render();
-  });
-  document.getElementById('f-low').addEventListener('click', e => {
-    state.hideLow = !state.hideLow; e.currentTarget.setAttribute('aria-pressed', state.hideLow); render();
+  const clusterStyle = s => ({
+    width: s + 'px', height: s + 'px', lineHeight: (s - 6) + 'px', boxSizing: 'border-box',
+    background: 'rgba(224, 123, 22, .88)', color: '#fff', borderRadius: '50%', textAlign: 'center',
+    fontWeight: '700', fontSize: '13px', border: '3px solid rgba(255,255,255,.85)', boxShadow: '0 2px 8px rgba(0,0,0,.3)',
+    fontFamily: 'inherit'
   });
 
-  document.getElementById('list').addEventListener('click', e => {
-    const li = e.target.closest('li[data-i]'); if (!li) return;
-    const m = markers[+li.dataset.i];
-    cluster.zoomToShowLayer(m, () => m.openPopup());
-    if (window.matchMedia('(max-width: 640px)').matches) setCollapsed(true);
-  });
+  function init() {
+    const mapEl = document.getElementById('map');
+    const map = new kakao.maps.Map(mapEl, { center: new kakao.maps.LatLng(35.9, 127.8), level: 13 });
+    map.addControl(new kakao.maps.MapTypeControl(), kakao.maps.ControlPosition.TOPRIGHT);
+    map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
+    // 남한 전체가 보이게. 데스크톱은 왼쪽 패널(330px) 만큼, 폰은 아래 패널 만큼 비워 둔다.
+    map.setBounds(new kakao.maps.LatLngBounds(new kakao.maps.LatLng(33.1, 125.9), new kakao.maps.LatLng(38.4, 129.7)),
+      12, 12, isDesktop() ? 12 : 90, isDesktop() ? 354 : 12);
+
+    // 레벨 7 이상(넓게 볼 때)에서만 묶는다. 레벨 6 이하에서는 점 하나하나가 보인다.
+    const CLUSTER_MIN_LEVEL = 7;
+    const clusterer = new kakao.maps.MarkerClusterer({
+      map, averageCenter: true, minLevel: CLUSTER_MIN_LEVEL, gridSize: 45, minClusterSize: 2,
+      calculator: [10, 50], styles: [clusterStyle(30), clusterStyle(38), clusterStyle(46)]
+    });
+
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const DAY = 86400000;
+    PLACES.forEach(p => {
+      const d = p.date && /^\d{4}-\d{2}-\d{2}/.test(p.date) ? new Date(p.date.slice(0, 10) + 'T00:00:00') : null;
+      // 최근 7일 안에 '핀 것을 본' 기록만: 관측기록, 제보, 또는 올해 개화를 적은 블로그 글
+      const seen = p.kind === '관측기록' || p.bloomSeen;
+      p.recent = seen && !!d && (today - d) / DAY <= 7 && (today - d) >= 0;
+    });
+
+    // 팝업: CustomOverlay 하나를 열고 닫는다.
+    let popup = null;
+    function closePopup() { if (popup) { popup.setMap(null); popup = null; } }
+    function openPopup(p) {
+      closePopup();
+      const el = document.createElement('div');
+      el.className = 'kpop';
+      el.innerHTML = `<button class="close" type="button" aria-label="닫기">×</button>` + popupHtml(p);
+      el.querySelector('.close').addEventListener('click', closePopup);
+      const pos = new kakao.maps.LatLng(p.lat, p.lng);
+      popup = new kakao.maps.CustomOverlay({ map, position: pos, content: el, xAnchor: 0.5, yAnchor: 1, zIndex: 10000, clickable: true });
+      // 팝업이 패널이나 화면 밖에 가리면 그만큼 지도를 민다 (Leaflet autoPan 대신).
+      requestAnimationFrame(() => {
+        const r = el.getBoundingClientRect(), m = mapEl.getBoundingClientRect();
+        const padL = isDesktop() ? 354 : 12, padB = isDesktop() ? 12 : 90, padT = 12, padR = 12;
+        let dx = 0, dy = 0;
+        if (r.left < m.left + padL) dx = r.left - (m.left + padL);
+        else if (r.right > m.right - padR) dx = r.right - (m.right - padR);
+        if (r.top < m.top + padT) dy = r.top - (m.top + padT);
+        else if (r.bottom > m.bottom - padB) dy = r.bottom - (m.bottom - padB);
+        if (dx || dy) map.panBy(dx, dy);
+      });
+    }
+    kakao.maps.event.addListener(map, 'click', closePopup);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closePopup(); });
+
+    const markers = PLACES.map((p, i) => {
+      const big = p.kind === '명소', pub = p.kind === '공공데이터';
+      const m = new kakao.maps.Marker({
+        position: new kakao.maps.LatLng(p.lat, p.lng), image: markerImage(p), title: p.name, clickable: true,
+        zIndex: p.recent ? 900 : big ? 500 : pub ? 300 : 0, opacity: big || pub ? 1 : 0.85
+      });
+      kakao.maps.event.addListener(m, 'click', () => openPopup(p));
+      m._p = p; m._i = i;
+      return m;
+    });
+
+    const state = { species: new Set(['금목서', '은목서', '목서']), kind: new Set(['명소', '공공데이터', '관측기록']), hideLow: false, recentOnly: false };
+    const visible = p => speciesTags(p.species).some(s => state.species.has(s)) && state.kind.has(p.kind)
+      && !(state.hideLow && p.confidence === '하') && !(state.recentOnly && !p.recent);
+
+    function render() {
+      closePopup();
+      clusterer.clear();
+      const shown = markers.filter(m => visible(m._p));
+      clusterer.addMarkers(shown);
+      const nRecent = shown.filter(m => m._p.recent).length;
+      shownEl.classList.remove('error');
+      shownEl.textContent = `지도에 ${shown.length}곳이 보여요` + (nRecent ? ` · 최근 7일 안에 핀 곳 ${nRecent}곳` : '');
+      const list = document.getElementById('list');
+      const spots = shown.filter(m => m._p.kind !== '관측기록').sort((a, b) => (a._p.address || '').localeCompare(b._p.address || '', 'ko'));
+      list.innerHTML = spots.map(m => `<li data-i="${m._i}">${esc(m._p.name)} <span class="badge ${m._p.species === '금목서' ? 'gold' : m._p.species === '은목서' ? 'silver' : ''}">${esc(m._p.species)}</span>${m._p.historical ? '<span class="badge">과거 관찰</span>' : ''}<small>${esc(m._p.address)}</small></li>`).join('')
+        || '<li>보이는 장소가 없어요.</li>';
+    }
+
+    function bindChips(id, key) {
+      document.querySelectorAll(`#${id} .chip`).forEach(b => b.addEventListener('click', () => {
+        const on = b.getAttribute('aria-pressed') !== 'true';
+        b.setAttribute('aria-pressed', on);
+        on ? state[key].add(b.dataset.v) : state[key].delete(b.dataset.v);
+        render();
+      }));
+    }
+    bindChips('f-species', 'species');
+    bindChips('f-kind', 'kind');
+    document.getElementById('f-recent').addEventListener('click', e => {
+      state.recentOnly = !state.recentOnly; e.currentTarget.setAttribute('aria-pressed', state.recentOnly); render();
+    });
+    document.getElementById('f-low').addEventListener('click', e => {
+      state.hideLow = !state.hideLow; e.currentTarget.setAttribute('aria-pressed', state.hideLow); render();
+    });
+
+    document.getElementById('list').addEventListener('click', e => {
+      const li = e.target.closest('li[data-i]'); if (!li) return;
+      const p = markers[+li.dataset.i]._p;
+      // 묶음이 풀리는 레벨까지 들어가서 그 자리로 옮긴 뒤 팝업을 연다 (Leaflet zoomToShowLayer 대신).
+      if (map.getLevel() >= CLUSTER_MIN_LEVEL) map.setLevel(CLUSTER_MIN_LEVEL - 1);
+      map.setCenter(new kakao.maps.LatLng(p.lat, p.lng));
+      if (window.matchMedia('(max-width: 640px)').matches) setCollapsed(true);
+      openPopup(p);
+    });
+
+    let meOverlay = null;
+    document.getElementById('locate').addEventListener('click', () => {
+      if (!navigator.geolocation) { alert('이 브라우저에서는 위치를 쓸 수 없어요.'); return; }
+      navigator.geolocation.getCurrentPosition(pos => {
+        const ll = new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
+        if (meOverlay) meOverlay.setMap(null);
+        const dot = document.createElement('div'); dot.className = 'me'; dot.title = '내 위치';
+        meOverlay = new kakao.maps.CustomOverlay({ map, position: ll, content: dot, xAnchor: 0.5, yAnchor: 0.5, zIndex: 5000 });
+        map.setLevel(8);
+        map.setCenter(ll);
+      }, err => alert('위치를 가져오지 못했어요. 휴대폰 설정에서 위치 권한을 확인해 주세요.'), { enableHighAccuracy: true, timeout: 10000 });
+    });
+
+    render();
+  }
 
   const panel = document.getElementById('panel'), toggle = document.getElementById('toggle');
   function setCollapsed(c) { panel.classList.toggle('collapsed', c); toggle.textContent = c ? '펼치기' : '접기'; toggle.setAttribute('aria-expanded', !c); }
   toggle.addEventListener('click', () => setCollapsed(!panel.classList.contains('collapsed')));
-
-  let meMarker = null;
-  document.getElementById('locate').addEventListener('click', () => {
-    if (!navigator.geolocation) { alert('이 브라우저에서는 위치를 쓸 수 없어요.'); return; }
-    navigator.geolocation.getCurrentPosition(pos => {
-      const ll = [pos.coords.latitude, pos.coords.longitude];
-      if (meMarker) meMarker.remove();
-      meMarker = L.circleMarker(ll, { radius: 8, color: '#1a73e8', fillColor: '#1a73e8', fillOpacity: .9, weight: 3 }).addTo(map).bindTooltip('내 위치');
-      map.setView(ll, 12);
-    }, err => alert('위치를 가져오지 못했어요. 휴대폰 설정에서 위치 권한을 확인해 주세요.'), { enableHighAccuracy: true, timeout: 10000 });
-  });
 
   if (META.built) {
     const [y, mo, d] = META.built.split('-').map(Number);
     document.getElementById('built').textContent = `${y}년 ${mo}월 ${d}일 기준이에요.`;
   }
   if (window.matchMedia('(max-width: 640px)').matches) setCollapsed(true);
-  render();
 })();
 </script>
 </body>
